@@ -1,260 +1,227 @@
-# Лабораторна робота №6
+# Реалізація об’єктно-реляційного відображення
 
-## Тема: Реалізація об’єктно-реляційного відображення
+## 1. Створення бази даних MySQL
 
-## Структура проєкту
+Було створено базу даних `test_db` у MySQL для зберігання даних.
 
 ```
-flex-form/
+CREATE DATABASE test_db;
+USE test_db;
+
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100),
+  email VARCHAR(100)
+);
+
+CREATE TABLE products (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100),
+  price DECIMAL(10,2)
+);
+```
+
+
+## 2. Створення Java-проєкту
+
+Для реалізації завдання створено консольний Java-проєкт без використання IDE. Усі дії виконувались через термінал macOS.
+
+```
+mkdir dao-demo
+cd dao-demo
+mkdir -p src/model src/dao src/test
+
+```
+
+
+**Структура проєкту:**
+
+```
+
+dao-demo/
 ├── src/
-│   ├── dao/
-│   │   ├── QuestionDAO.java
-│   │   ├── FormDAO.java
-│   │   └── ResponseDAO.java
-│   ├── model/
-│   │   ├── Question.java
-│   │   ├── Form.java
-│   │   └── Response.java
-│   ├── Main.java
-├── db/
-│   └── init.sql
-├── README.md
+│   ├── model/      — bean-класи (модель таблиць)
+│   ├── dao/        — реалізація DAO
+│   └── test/       — тестовий клас
+
+````
+
+## 3. Створення таблиці `users`
+
+У базі даних `test_db` створено таблицю `users` зі структурою:
+
+- `id` — унікальний ідентифікатор
+- `name` — ім’я користувача
+- `email` — електронна пошта
+
+Ця таблиця використовується для демонстрації операцій вставки та пошуку.
+
+```
+CREATE DATABASE test_db;
+USE test_db;
+
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100),
+  email VARCHAR(100)
+);
+
 ```
 
-## SQL: Створення бази даних `init.sql`
+## 4. Створення bean-класу
 
-```sql
-CREATE DATABASE IF NOT EXISTS flexform;
-USE flexform;
-
-CREATE TABLE IF NOT EXISTS forms (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS questions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    form_id INT,
-    text VARCHAR(255) NOT NULL,
-    type ENUM('text', 'number', 'date', 'radio', 'checkbox') NOT NULL,
-    required BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (form_id) REFERENCES forms(id)
-);
-
-CREATE TABLE IF NOT EXISTS responses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    question_id INT,
-    answer TEXT,
-    FOREIGN KEY (question_id) REFERENCES questions(id)
-);
-```
-
-## Bean-класи
-
-### Form.java
+Створено клас `User` (у `src/model/User.java`), який описує один запис таблиці `users`.
 
 ```java
 package model;
 
-public class Form {
+public class User {
     private int id;
-    private String title;
+    private String name;
+    private String email;
 
-    public Form(int id, String title) {
+    public User(int id, String name, String email) {
         this.id = id;
-        this.title = title;
+        this.name = name;
+        this.email = email;
     }
 
-    public Form(String title) {
-        this.title = title;
-    }
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
 
-    public int getId() {
-        return id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
+    public void setId(int id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
 }
-```
 
-### Question.java
+````
 
-```java
-package model;
+## 5. Розробка DAO-інфраструктури
 
-public class Question {
-    private int id;
-    private int formId;
-    private String text;
-    private String type;
-    private boolean required;
+У пакеті `src/dao/` реалізовано клас `UserDAO.java`, який містить методи для:
 
-    public Question(int id, int formId, String text, String type, boolean required) {
-        this.id = id;
-        this.formId = formId;
-        this.text = text;
-        this.type = type;
-        this.required = required;
-    }
-
-    public Question(int formId, String text, String type, boolean required) {
-        this.formId = formId;
-        this.text = text;
-        this.type = type;
-        this.required = required;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public int getFormId() {
-        return formId;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public boolean isRequired() {
-        return required;
-    }
-}
-```
-
-### Response.java
-
-```java
-package model;
-
-public class Response {
-    private int id;
-    private int questionId;
-    private String answer;
-
-    public Response(int id, int questionId, String answer) {
-        this.id = id;
-        this.questionId = questionId;
-        this.answer = answer;
-    }
-
-    public Response(int questionId, String answer) {
-        this.questionId = questionId;
-        this.answer = answer;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public int getQuestionId() {
-        return questionId;
-    }
-
-    public String getAnswer() {
-        return answer;
-    }
-}
-```
-
-## DAO-класи (приклад одного)
-
-### FormDAO.java
+* вставки нового користувача
+* пошуку користувача за ім'ям
 
 ```java
 package dao;
 
-import model.Form;
+import model.User;
 import java.sql.*;
 import java.util.*;
 
-public class FormDAO {
-    private Connection connection;
+public class UserDAO {
+    private Connection conn;
 
-    public FormDAO(Connection connection) {
-        this.connection = connection;
+    public UserDAO(Connection conn) {
+        this.conn = conn;
     }
 
-    public void insert(Form form) throws SQLException {
-        PreparedStatement stmt = connection.prepareStatement("INSERT INTO forms (title) VALUES (?)");
-        stmt.setString(1, form.getTitle());
+    public void insert(User user) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement(
+            "INSERT INTO users (name, email) VALUES (?, ?)"
+        );
+        stmt.setString(1, user.getName());
+        stmt.setString(2, user.getEmail());
         stmt.executeUpdate();
     }
 
-    public List<Form> getAll() throws SQLException {
-        List<Form> forms = new ArrayList<>();
-        Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT * FROM forms");
-        while (rs.next()) {
-            forms.add(new Form(rs.getInt("id"), rs.getString("title")));
-        }
-        return forms;
-    }
-}
+    public List<User> findByName(String name) throws SQLException {
+        List<User>
+
 ```
 
-## Головний клас
+## 6. Тестування DAO
 
-### Main.java
+У `src/test/TestDAO.java` створено тестовий клас `TestDAO`, який:
 
-```java
-import dao.*;
-import model.*;
+* підключається до бази `test_db`
+* створює нові записи
+* виконує пошук за ім’ям
+* використовує `UserDAO` для роботи з базою
+
+```
+package test;
+
+import dao.UserDAO;
+import model.User;
 import java.sql.*;
+import java.util.List;
 
-public class Main {
-    public static void main(String[] args) throws Exception {
-        Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/flexform", "root", "password");
+public class TestDAO {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/test_db";
+        String user = "root";
+        String password = "your_password"; // замініть на актуальний
 
-        FormDAO formDAO = new FormDAO(connection);
-        formDAO.insert(new Form("Опитування користувача"));
+        try {
+            Connection conn = DriverManager.getConnection(url, user, password);
+            UserDAO userDAO = new UserDAO(conn);
 
-        for (Form form : formDAO.getAll()) {
-            System.out.println("Форма: " + form.getTitle());
+            // Додавання користувачів
+            userDAO.insert(new User(0, "Олег", "oleh@example.com"));
+            userDAO.insert(new User(0, "Анна", "anna@example.com"));
+
+            // Пошук
+            List<User> users = userDAO.findByName("Олег");
+            for (User u : users) {
+                System.out.println("Found: " + u.getName() + ", " + u.getEmail());
+            }
+
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
-        connection.close();
     }
 }
-```
-## Запуск програми
 
-1. Я імпортував базу даних, виконавши SQL-скрипт `db/init.sql` у середовищі MySQL (через консоль або MySQL Workbench).
-2. Далі я скомпілював програму за допомогою команди:
+```
+
+
+## 7. Запуск програми
+
+**Компіляція:**
 
 ```bash
- javac -cp .:mysql-connector-java-8.0.33.jar src/**/*.java
+javac -cp "lib/mysql-connector-j-<version>.jar" src/**/*.java
 ```
 
-(на Windows замість `:` потрібно використовувати `;`):
+**Запуск:**
 
 ```bash
- javac -cp .;mysql-connector-java-8.0.33.jar src/**/*.java
+java -cp "lib/mysql-connector-j-<version>.jar:src" test.TestDAO
 ```
 
-3. Після цього я запустив головний клас:
+**Перевірка результатів у MySQL:**
 
-```bash
- java -cp .:mysql-connector-java-8.0.33.jar src/Main
+```sql
+javac -cp "lib/mysql-connector-j-9.3.0.jar" \
+src/model/User.java src/dao/UserDAO.java src/test/TestDAO.java
+______________________________________________________________
+
+java -cp "lib/mysql-connector-j-9.3.0.jar:src" test.TestDAO
+
+______________________________________________________________
+
+Found: Oleh | oleh@example.com
+Found: Oleh | oleh@example.com
+
+```
+<img width="266" alt="image" src="https://github.com/user-attachments/assets/57236c0b-c5b6-4ecd-a2ae-3d2b4cd9c7db" />
+
+
+
+## 8. Висновок
+
+* Реалізовано шаблон **DAO (Data Access Object)** для взаємодії з базою MySQL.
+* Створено базу `test_db` та таблицю `users`.
+* Описано модель `User`.
+* Реалізовано клас `UserDAO` з методами вставки та пошуку.
+* Проведено тестування з реальними даними.
+* Програма успішно читає та записує інформацію до бази.
+
+Це підтверджує правильність реалізації архітектурного патерна DAO.
+
 ```
 
-або на Windows:
-
-```bash
- java -cp .;mysql-connector-java-8.0.33.jar src/Main
-```
-
-4. Після запуску я побачив результати виконання в консолі, а також перевірив, що нові записи з'явилися в базі `flexform`.
-![](./images/456.jpg)
-
-
-
-## Висновки
-
-У межах лабораторної роботи було створено вебзастосунок Flex Form — систему створення онлайн-форм із використанням DAO. Реалізовано структуру бази даних, моделі об’єктів, класи доступу до даних і демонстраційну програму. Такий підхід забезпечує ізоляцію бізнес-логіки від деталей СКБД, гнучкість і масштабованість у проєктуванні веб-додатків.
