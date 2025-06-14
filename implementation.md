@@ -262,19 +262,9 @@ java -cp "lib/mysql-connector-j-<version>.jar:src" test.TestDAO
 
 **Перевірка результатів у MySQL:**
 
-```sql
-javac -cp "lib/mysql-connector-j-9.3.0.jar" \
-src/model/User.java src/dao/UserDAO.java src/test/TestDAO.java
-______________________________________________________________
+<img width="500" alt="image" src="./images/photo1.png" />
 
-java -cp "lib/mysql-connector-j-9.3.0.jar:src" test.TestDAO
 
-______________________________________________________________
-
-Found: Oleh | oleh@example.com
-Found: Oleh | oleh@example.com
-
-```
 <img width="266" alt="image" src="./images/photo.png" />
 
 
