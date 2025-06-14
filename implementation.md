@@ -275,7 +275,7 @@ Found: Oleh | oleh@example.com
 Found: Oleh | oleh@example.com
 
 ```
-<img width="266" alt="image" src="./images/AssignRole.png" />
+<img width="266" alt="image" src="./images/photo.jpg" />
 
 
 
