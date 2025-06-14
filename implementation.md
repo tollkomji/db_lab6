@@ -275,7 +275,7 @@ Found: Oleh | oleh@example.com
 Found: Oleh | oleh@example.com
 
 ```
-<img src="./images/photo.png" width="500" />
+<img src="./images/photo.png" style="width: 500px;" />
 
 
 
