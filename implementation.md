@@ -265,7 +265,7 @@ java -cp "lib/mysql-connector-j-<version>.jar:src" test.TestDAO
 <img width="500" alt="image" src="./images/photo1.png" />
 
 
-<img width="500" alt="image" src="./images/photo.png" />
+<img width="800" alt="image" src="./images/photo.png" />
 
 
 
